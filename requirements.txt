@@ -1,9 +1,9 @@
-pandas
-duckdb
-plotly
-streamlit
-requests
-pyarrow
-fastparquet
+streamlit==1.42.2 
+altair==5.4.1 
+pandas 
+duckdb 
+plotly 
+requests 
+pyarrow 
+fastparquet 
 polars
-altair
