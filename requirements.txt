@@ -1,4 +1,4 @@
-'''
+
 altair==6.0.0
 anyio==4.12.1
 argon2-cffi==25.1.0
@@ -122,15 +122,5 @@ webcolors==25.10.0
 webencodings==0.5.1
 websocket-client==1.9.0
 widgetsnbextension==4.0.15
-'''
 
-pandas
-polars
-duckdb
-plotly
-altair
-streamlit
-requests
-pyarrow
-fastparquet
-ipykernel
+
