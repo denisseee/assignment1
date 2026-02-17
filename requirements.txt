@@ -123,10 +123,21 @@ webencodings==0.5.1
 websocket-client==1.9.0
 widgetsnbextension==4.0.15
 
-'''
+
 pandas==2.2.3
 duckdb==1.2.0
 plotly==6.0.0
 streamlit==1.42.2
 requests==2.32.3
 pyarrow==19.0.1
+'''
+
+pandas
+duckdb
+plotly
+streamlit
+requests
+pyarrow
+fastparquet
+polars
+altair
