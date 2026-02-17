@@ -1,4 +1,4 @@
-
+'''
 altair==6.0.0
 anyio==4.12.1
 argon2-cffi==25.1.0
@@ -123,4 +123,10 @@ webencodings==0.5.1
 websocket-client==1.9.0
 widgetsnbextension==4.0.15
 
-
+'''
+pandas==2.2.3
+duckdb==1.2.0
+plotly==6.0.0
+streamlit==1.42.2
+requests==2.32.3
+pyarrow==19.0.1
