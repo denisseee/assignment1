@@ -11,8 +11,53 @@ st.set_page_config(
 #Loading Data... 
 @st.cache_data
 def load_data():
-    df = pd.read_parquet('data/raw/taxi_cleaned.parquet')
-    zones = pd.read_csv('data/raw/taxi_zone_lookup.csv')
+    import requests
+    import os
+
+    os.makedirs('data/raw', exist_ok=True)
+
+    zone_path = 'data/raw/taxi_zone_lookup.csv'
+    if not os.path.exists(zone_path):
+        url = 'https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv'
+        r = requests.get(url)
+        with open(zone_path, 'wb') as f:
+            f.write(r.content)
+
+    
+    parquet_path = 'data/raw/taxi_cleaned.parquet'
+    if not os.path.exists(parquet_path):
+        url = 'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet'
+        r = requests.get(url, stream=True)
+        with open('data/raw/yellow_tripdata_2024-01.parquet', 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+    
+        df = pd.read_parquet('data/raw/yellow_tripdata_2024-01.parquet')
+        df = df.dropna(subset=['tpep_pickup_datetime', 'tpep_dropoff_datetime',
+                               'PULocationID', 'DOLocationID', 'fare_amount'])
+        df = df[df['trip_distance'] > 0]
+        df = df[df['fare_amount'] > 0]
+        df = df[df['fare_amount'] <= 500]
+        df = df[df['tpep_dropoff_datetime'] > df['tpep_pickup_datetime']]
+        df = df[(df['tpep_pickup_datetime'] >= '2024-01-01') &
+                (df['tpep_pickup_datetime'] < '2024-02-01')]
+
+        
+        df['trip_duration_minutes'] = (
+            (df['tpep_dropoff_datetime'] - df['tpep_pickup_datetime'])
+            .dt.total_seconds() / 60
+        )
+        df['trip_speed_mph'] = (
+            df['trip_distance'] / (df['trip_duration_minutes'] / 60)
+        ).where(df['trip_duration_minutes'] > 0, other=0)
+        df['pickup_hour'] = df['tpep_pickup_datetime'].dt.hour
+        df['pickup_day_of_week'] = df['tpep_pickup_datetime'].dt.day_name()
+
+        df.to_parquet(parquet_path, index=False)
+
+    df = pd.read_parquet(parquet_path)
+    zones = pd.read_csv(zone_path)
     return df, zones
 
 df, zones = load_data()
