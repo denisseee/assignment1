@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 
 st.set_page_config(
     page_title='NYC Taxi Dashboard',
@@ -11,9 +12,6 @@ st.set_page_config(
 #Loading Data... 
 @st.cache_data
 def load_data():
-    import requests
-    import os
-
     os.makedirs('data/raw', exist_ok=True)
 
     zone_path = 'data/raw/taxi_zone_lookup.csv'
@@ -22,18 +20,35 @@ def load_data():
         r = requests.get(url)
         with open(zone_path, 'wb') as f:
             f.write(r.content)
-
     
     parquet_path = 'data/raw/taxi_cleaned.parquet'
-    if not os.path.exists(parquet_path):
-        url = 'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet'
-        r = requests.get(url, stream=True)
-        with open('data/raw/yellow_tripdata_2024-01.parquet', 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-
     
-        df = pd.read_parquet('data/raw/yellow_tripdata_2024-01.parquet')
+    if not os.path.exists(parquet_path):
+        #Downloading only the first 100,000 rows of the January 2024 data
+        url = 'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet'
+        
+        #Using pyarrow to read only a portion of the parquet file
+        import pyarrow.parquet as pq
+        
+        temp_path = 'data/raw/yellow_tripdata_2024-01.parquet'
+        
+        with st.spinner('Downloading taxi data...'):
+            r = requests.get(url, stream=True)
+            with open(temp_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        
+        with st.spinner('Processing data...'):
+            parquet_file = pq.ParquetFile(temp_path)
+            
+            df = parquet_file.read_row_group(0).to_pandas()
+            
+            if len(df) < 100000 and parquet_file.num_row_groups > 1:
+                df2 = parquet_file.read_row_group(1).to_pandas()
+                df = pd.concat([df, df2], ignore_index=True)
+                df = df.head(100000)  
+        
+        
         df = df.dropna(subset=['tpep_pickup_datetime', 'tpep_dropoff_datetime',
                                'PULocationID', 'DOLocationID', 'fare_amount'])
         df = df[df['trip_distance'] > 0]
@@ -54,13 +69,20 @@ def load_data():
         df['pickup_hour'] = df['tpep_pickup_datetime'].dt.hour
         df['pickup_day_of_week'] = df['tpep_pickup_datetime'].dt.day_name()
 
+        
         df.to_parquet(parquet_path, index=False)
+        
+        
+        os.remove(temp_path)
 
+    
     df = pd.read_parquet(parquet_path)
     zones = pd.read_csv(zone_path)
+    
     return df, zones
 
 df, zones = load_data()
+
 
 #Payment type labels
 payment_labels = {1: 'Credit Card', 2: 'Cash', 3: 'No Charge', 4: 'Dispute', 5: 'Unknown'}
